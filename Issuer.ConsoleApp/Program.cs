@@ -1,4 +1,5 @@
-﻿using Issuer.BusinessLogic.Github;
+﻿using Issuer.BusinessLogic;
+using Issuer.BusinessLogic.Github;
 using Issuer.BusinessLogic.GitLab;
 
 Console.WriteLine("Hello, Issuer!");
@@ -28,4 +29,12 @@ foreach (var issue in gitlabIssues)
     Console.WriteLine($"{issue.Title}");
 }
 
+var gitHubIssuesManager = new IssuesManager(github);
+var gitLabIssuesManager = new IssuesManager(gitlab);
+
+await gitHubIssuesManager.ExportIssuesAsync("gitHubIssues.txt");
+Console.WriteLine("GitHub issues exported!");
+await gitLabIssuesManager.ExportIssuesAsync("gitLabIssues.txt");
+Console.WriteLine("GitLab issues exported!");
+    
 Console.ReadLine();
