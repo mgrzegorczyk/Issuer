@@ -95,6 +95,26 @@ public class GitHubService : IIssuesHostingService
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task CreateIssue(string title, string description)
+    {
+        var issueData = new
+        {
+            title = title,
+            body = description
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post,
+            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues")
+        {
+            Content = content
+        };
+        ConfigureRequestHeaders(request);
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
+
     private void ConfigureRequestHeaders(HttpRequestMessage request)
     {
         request.Headers.Add("Authorization", $"token {_authToken}");

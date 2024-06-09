@@ -28,9 +28,14 @@ public class IssuesManager
     {
         await _issuesHostingService.UpdateIssueTitleAsync(number, newName);
     }
-    
+
     public async Task SetIssueDescriptionAsync(Int64 number, string newDescription)
     {
         await _issuesHostingService.UpdateIssueDescriptionAsync(number, newDescription);
+    }
+
+    public async Task CreateIssue(string title, string description)
+    {
+        await _issuesHostingService.CreateIssue(title, description);
     }
 }

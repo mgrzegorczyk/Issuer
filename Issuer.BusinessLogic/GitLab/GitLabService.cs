@@ -93,7 +93,27 @@ namespace Issuer.BusinessLogic.GitLab
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
         }
-        
+
+        public async Task CreateIssue(string title, string description)
+        {
+            var issueData = new
+            {
+                title = title,
+                description = description
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
+            var request = new HttpRequestMessage(HttpMethod.Post,
+                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues")
+            {
+                Content = content
+            };
+            ConfigureRequestHeaders(request);
+
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+        }
+
         private void ConfigureRequestHeaders(HttpRequestMessage request)
         {
             request.Headers.Add("PRIVATE-TOKEN", $"{_authToken}");
