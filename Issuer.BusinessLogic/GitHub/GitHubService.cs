@@ -95,7 +95,7 @@ public class GitHubService : IIssuesHostingService
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task CreateIssue(string title, string description)
+    public async Task CreateIssueAsync(string title, string description)
     {
         var issueData = new
         {

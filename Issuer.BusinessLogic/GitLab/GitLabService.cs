@@ -94,7 +94,7 @@ namespace Issuer.BusinessLogic.GitLab
             response.EnsureSuccessStatusCode();
         }
 
-        public async Task CreateIssue(string title, string description)
+        public async Task CreateIssueAsync(string title, string description)
         {
             var issueData = new
             {

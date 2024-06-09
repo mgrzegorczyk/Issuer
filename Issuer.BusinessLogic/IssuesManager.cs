@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using Issuer.BusinessLogic.Interfaces;
+using Issuer.BusinessLogic.Models;
 
 namespace Issuer.BusinessLogic;
 
@@ -34,8 +35,17 @@ public class IssuesManager
         await _issuesHostingService.UpdateIssueDescriptionAsync(number, newDescription);
     }
 
-    public async Task CreateIssue(string title, string description)
+    public async Task CreateIssueAsync(string title, string description)
     {
-        await _issuesHostingService.CreateIssue(title, description);
+        await _issuesHostingService.CreateIssueAsync(title, description);
+    }
+
+    public async Task ImportIssuesAsync(string filePath)
+    {
+        var json = await File.ReadAllTextAsync(filePath);
+        var issues = JsonSerializer.Deserialize<List<Issue>>(json);
+
+        var tasks = issues.Select(issue => CreateIssueAsync(issue.Title, issue.Description)).ToList();
+        await Task.WhenAll(tasks);
     }
 }
