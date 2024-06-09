@@ -58,4 +58,14 @@ public class GitHubService : IIssuesHostingService
         var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
     }
+
+    public Task UpdateIssueTitleAsync(Int64 issueNumber, string newTitle)
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task UpdateIssueDescriptionAsync(Int64 issueNumber, string newDescription)
+    {
+        throw new NotImplementedException();
+    }
 }

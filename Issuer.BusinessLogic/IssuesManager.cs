@@ -23,4 +23,14 @@ public class IssuesManager
     {
         await _issuesHostingService.CloseIssueAsync(number);
     }
+
+    public async Task SetIssueNameAsync(Int64 number, string newName)
+    {
+        await _issuesHostingService.UpdateIssueTitleAsync(number, newName);
+    }
+    
+    public async Task SetIssueDescriptionAsync(Int64 number, string newDescription)
+    {
+        await _issuesHostingService.UpdateIssueDescriptionAsync(number, newDescription);
+    }
 }
