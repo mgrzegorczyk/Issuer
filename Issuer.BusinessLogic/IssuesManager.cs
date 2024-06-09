@@ -18,4 +18,9 @@ public class IssuesManager
         var json = JsonSerializer.Serialize(issues);
         await File.WriteAllTextAsync(filePath, json);
     }
+
+    public async Task CloseIssueAsync(Int64 number)
+    {
+        await _issuesHostingService.CloseIssueAsync(number);
+    }
 }

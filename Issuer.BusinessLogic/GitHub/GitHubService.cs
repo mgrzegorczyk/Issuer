@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Issuer.BusinessLogic.GitHub.Models;
 using Issuer.BusinessLogic.Interfaces;
 using Issuer.BusinessLogic.Models;
@@ -37,5 +38,24 @@ public class GitHubService : IIssuesHostingService
             issue.Body,
             issue.State == "closed"
         )).ToList();
+    }
+
+    public async Task CloseIssueAsync(Int64 issueNumber)
+    {
+        var issueData = new
+        {
+            state = "closed"
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueNumber}")
+        {
+            Content = content
+        };
+        request.Headers.Add("Authorization", $"token {_authToken}");
+        request.Headers.Add("User-Agent", "HttpClient");
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
     }
 }

@@ -36,5 +36,10 @@ namespace Issuer.BusinessLogic.GitLab
                 issue.State == "closed"
             )).ToList();
         }
+
+        public Task CloseIssueAsync(Int64 issueNumber)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
