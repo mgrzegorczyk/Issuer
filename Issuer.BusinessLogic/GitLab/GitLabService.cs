@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using Issuer.BusinessLogic.GitLab.Models;
 using Issuer.BusinessLogic.Interfaces;
 using Issuer.BusinessLogic.Models;
@@ -22,9 +23,8 @@ namespace Issuer.BusinessLogic.GitLab
         {
             var request = new HttpRequestMessage(HttpMethod.Get,
                 $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues?scope=all");
-            request.Headers.Add("Authorization", $"token {_authToken}");
-            request.Headers.Add("User-Agent", "HttpClient");
-
+            ConfigureRequestHeaders(request);
+            
             var response = await _httpClient.SendAsync(request);
             response.EnsureSuccessStatusCode();
 
@@ -37,9 +37,29 @@ namespace Issuer.BusinessLogic.GitLab
             )).ToList();
         }
 
-        public Task CloseIssueAsync(Int64 issueNumber)
+        public async Task CloseIssueAsync(Int64 issueId)
         {
-            throw new NotImplementedException();
+            var issueData = new
+            {
+                state_event = "close"
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
+            var request = new HttpRequestMessage(HttpMethod.Put, 
+                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues/{issueId}")
+            {
+                Content = content
+            };
+            ConfigureRequestHeaders(request);
+
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+        }
+        
+        private void ConfigureRequestHeaders(HttpRequestMessage request)
+        {
+            request.Headers.Add("PRIVATE-TOKEN", $"{_authToken}");
+            request.Headers.Add("User-Agent", "HttpClient");
         }
     }
 }
