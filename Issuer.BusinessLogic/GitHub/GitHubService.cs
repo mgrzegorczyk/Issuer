@@ -25,8 +25,7 @@ public class GitHubService : IIssuesHostingService
     {
         var request = new HttpRequestMessage(HttpMethod.Get,
             $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues?state=all");
-        request.Headers.Add("Authorization", $"token {_authToken}");
-        request.Headers.Add("User-Agent", "HttpClient");
+        ConfigureRequestHeaders(request);
 
         var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
@@ -52,20 +51,53 @@ public class GitHubService : IIssuesHostingService
         {
             Content = content
         };
-        request.Headers.Add("Authorization", $"token {_authToken}");
-        request.Headers.Add("User-Agent", "HttpClient");
+        ConfigureRequestHeaders(request);
 
         var response = await _httpClient.SendAsync(request);
         response.EnsureSuccessStatusCode();
     }
 
-    public Task UpdateIssueTitleAsync(Int64 issueNumber, string newTitle)
+    public async Task UpdateIssueTitleAsync(long issueId, string newTitle)
     {
-        throw new NotImplementedException();
+        var issueData = new
+        {
+            title = newTitle
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Patch,
+            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueId}")
+        {
+            Content = content
+        };
+        ConfigureRequestHeaders(request);
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
     }
 
-    public Task UpdateIssueDescriptionAsync(Int64 issueNumber, string newDescription)
+    public async Task UpdateIssueDescriptionAsync(long issueId, string newDescription)
     {
-        throw new NotImplementedException();
+        var issueData = new
+        {
+            body = newDescription
+        };
+
+        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Patch,
+            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueId}")
+        {
+            Content = content
+        };
+        ConfigureRequestHeaders(request);
+
+        var response = await _httpClient.SendAsync(request);
+        response.EnsureSuccessStatusCode();
+    }
+
+    private void ConfigureRequestHeaders(HttpRequestMessage request)
+    {
+        request.Headers.Add("Authorization", $"token {_authToken}");
+        request.Headers.Add("User-Agent", "HttpClient");
     }
 }
