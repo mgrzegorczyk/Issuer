@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Issuer.BusinessLogic.Github.Models;
+using Issuer.BusinessLogic.GitHub.Models;
 using Issuer.BusinessLogic.Interfaces;
 using Issuer.BusinessLogic.Models;
 

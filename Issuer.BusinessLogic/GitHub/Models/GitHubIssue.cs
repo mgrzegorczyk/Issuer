@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Issuer.BusinessLogic.Github.Models;
+namespace Issuer.BusinessLogic.GitHub.Models;
 
 public class GitHubIssue
 {
