@@ -1,123 +1,86 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Issuer.BusinessLogic.GitHub.Models;
 using Issuer.BusinessLogic.Interfaces;
 using Issuer.BusinessLogic.Models;
+using Issuer.BusinessLogic.Abstractions;
 
-namespace Issuer.BusinessLogic.Github;
-
-public class GitHubService : IIssuesHostingService
+namespace Issuer.BusinessLogic.Github
 {
-    private readonly HttpClient _httpClient;
-    private readonly string _repositoryOwner;
-    private readonly string _repositoryName;
-    private readonly string _authToken;
-
-    public GitHubService(string repositoryOwner, string repositoryName, string authToken)
+    public sealed class GitHubService : IssuesHostingServiceBase, IIssuesHostingService
     {
-        _httpClient = new HttpClient();
-        _repositoryOwner = repositoryOwner;
-        _repositoryName = repositoryName;
-        _authToken = authToken;
-    }
+        private readonly string _repositoryOwner;
+        private readonly string _repositoryName;
 
-    public async Task<List<Issue>> GetIssuesAsync()
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get,
-            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues?state=all");
-        ConfigureRequestHeaders(request);
-
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-
-        var responseData = await response.Content.ReadAsStringAsync();
-        var gitHubIssues = JsonSerializer.Deserialize<List<GitHubIssue>>(responseData);
-
-        return gitHubIssues.Select(issue => new Issue(issue.Title,
-            issue.Body,
-            issue.State == "closed"
-        )).ToList();
-    }
-
-    public async Task CloseIssueAsync(Int64 issueNumber)
-    {
-        var issueData = new
+        public GitHubService(string repositoryOwner, string repositoryName, string authToken)
+            : base(authToken)
         {
-            state = "closed"
-        };
+            _repositoryOwner = repositoryOwner;
+            _repositoryName = repositoryName;
+        }
 
-        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Patch, $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueNumber}")
+        public async Task<List<Issue>> GetIssuesAsync()
         {
-            Content = content
-        };
-        ConfigureRequestHeaders(request);
+            var request = CreateRequest(HttpMethod.Get,
+                $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues?state=all");
 
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-    }
+            var response = await SendRequestAsync(request);
 
-    public async Task UpdateIssueTitleAsync(long issueId, string newTitle)
-    {
-        var issueData = new
+            var gitHubIssues = JsonSerializer.Deserialize<List<GitHubIssue>>(response);
+
+            return gitHubIssues.Select(issue => new Issue(issue.Title,
+                issue.Body,
+                issue.State == "closed"
+            )).ToList();
+        }
+
+        public async Task CloseIssueAsync(long issueNumber)
         {
-            title = newTitle
-        };
+            await UpdateIssueStateAsync(issueNumber, "closed");
+        }
 
-        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Patch,
-            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueId}")
+        public async Task UpdateIssueTitleAsync(long issueId, string newTitle)
         {
-            Content = content
-        };
-        ConfigureRequestHeaders(request);
+            await UpdateIssueAsync(issueId, new { title = newTitle });
+        }
 
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-    }
-
-    public async Task UpdateIssueDescriptionAsync(long issueId, string newDescription)
-    {
-        var issueData = new
+        public async Task UpdateIssueDescriptionAsync(long issueId, string newDescription)
         {
-            body = newDescription
-        };
+            await UpdateIssueAsync(issueId, new { body = newDescription });
+        }
 
-        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Patch,
-            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueId}")
+        public async Task CreateIssueAsync(string title, string description)
         {
-            Content = content
-        };
-        ConfigureRequestHeaders(request);
+            var issueData = new { title, body = description };
+            var request = CreateRequest(HttpMethod.Post,
+                $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues",
+                issueData);
 
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-    }
+            await SendRequestAsync(request);
+        }
 
-    public async Task CreateIssueAsync(string title, string description)
-    {
-        var issueData = new
+        private async Task UpdateIssueStateAsync(long issueId, string state)
         {
-            title = title,
-            body = description
-        };
+            var issueData = new { state };
+            var request = CreateRequest(HttpMethod.Patch,
+                $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueId}",
+                issueData);
 
-        var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-        var request = new HttpRequestMessage(HttpMethod.Post,
-            $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues")
+            await SendRequestAsync(request);
+        }
+
+        private async Task UpdateIssueAsync(long issueId, object issueData)
         {
-            Content = content
-        };
-        ConfigureRequestHeaders(request);
+            var request = CreateRequest(HttpMethod.Patch,
+                $"https://api.github.com/repos/{_repositoryOwner}/{_repositoryName}/issues/{issueId}",
+                issueData);
 
-        var response = await _httpClient.SendAsync(request);
-        response.EnsureSuccessStatusCode();
-    }
+            await SendRequestAsync(request);
+        }
 
-    private void ConfigureRequestHeaders(HttpRequestMessage request)
-    {
-        request.Headers.Add("Authorization", $"token {_authToken}");
-        request.Headers.Add("User-Agent", "HttpClient");
+        protected override void ConfigureRequestHeaders(HttpRequestMessage request)
+        {
+            request.Headers.Add("Authorization", $"token {_authToken}");
+            request.Headers.Add("User-Agent", "HttpClient");
+        }
     }
 }

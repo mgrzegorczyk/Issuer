@@ -1,35 +1,29 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Issuer.BusinessLogic.GitLab.Models;
 using Issuer.BusinessLogic.Interfaces;
 using Issuer.BusinessLogic.Models;
+using Issuer.BusinessLogic.Abstractions;
 
 namespace Issuer.BusinessLogic.GitLab
 {
-    public class GitLabService : IIssuesHostingService
+    public sealed class GitLabService : IssuesHostingServiceBase, IIssuesHostingService
     {
-        private readonly HttpClient _httpClient;
         private readonly string _repositoryId;
-        private readonly string _authToken;
 
         public GitLabService(string repositoryId, string authToken)
+            : base(authToken)
         {
-            _httpClient = new HttpClient();
             _repositoryId = repositoryId;
-            _authToken = authToken;
         }
 
         public async Task<List<Issue>> GetIssuesAsync()
         {
-            var request = new HttpRequestMessage(HttpMethod.Get,
+            var request = CreateRequest(HttpMethod.Get,
                 $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues?scope=all");
-            ConfigureRequestHeaders(request);
-            
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
 
-            var responseData = await response.Content.ReadAsStringAsync();
-            var gitLabIssues = JsonSerializer.Deserialize<List<GitLabIssue>>(responseData);
+            var response = await SendRequestAsync(request);
+
+            var gitLabIssues = JsonSerializer.Deserialize<List<GitLabIssue>>(response);
 
             return gitLabIssues.Select(issue => new Issue(issue.Title,
                 issue.Description,
@@ -37,84 +31,51 @@ namespace Issuer.BusinessLogic.GitLab
             )).ToList();
         }
 
-        public async Task CloseIssueAsync(Int64 issueId)
+        public async Task CloseIssueAsync(long issueId)
         {
-            var issueData = new
-            {
-                state_event = "close"
-            };
-
-            var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Put, 
-                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues/{issueId}")
-            {
-                Content = content
-            };
-            ConfigureRequestHeaders(request);
-
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
-        }
-        
-        public async Task UpdateIssueTitleAsync(Int64 issueId, string newTitle)
-        {
-            var issueData = new
-            {
-                title = newTitle
-            };
-
-            var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Put, 
-                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues/{issueId}")
-            {
-                Content = content
-            };
-            ConfigureRequestHeaders(request);
-
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            await UpdateIssueStateAsync(issueId, "close");
         }
 
-        public async Task UpdateIssueDescriptionAsync(Int64 issueId, string newDescription)
+        public async Task UpdateIssueTitleAsync(long issueId, string newTitle)
         {
-            var issueData = new
-            {
-                description = newDescription
-            };
+            await UpdateIssueAsync(issueId, new { title = newTitle });
+        }
 
-            var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Put, 
-                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues/{issueId}")
-            {
-                Content = content
-            };
-            ConfigureRequestHeaders(request);
-
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+        public async Task UpdateIssueDescriptionAsync(long issueId, string newDescription)
+        {
+            await UpdateIssueAsync(issueId, new { description = newDescription });
         }
 
         public async Task CreateIssueAsync(string title, string description)
         {
-            var issueData = new
-            {
-                title = title,
-                description = description
-            };
+            var issueData = new { title, description };
+            var request = CreateRequest(HttpMethod.Post,
+                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues",
+                issueData);
 
-            var content = new StringContent(JsonSerializer.Serialize(issueData), Encoding.UTF8, "application/json");
-            var request = new HttpRequestMessage(HttpMethod.Post,
-                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues")
-            {
-                Content = content
-            };
-            ConfigureRequestHeaders(request);
-
-            var response = await _httpClient.SendAsync(request);
-            response.EnsureSuccessStatusCode();
+            await SendRequestAsync(request);
         }
 
-        private void ConfigureRequestHeaders(HttpRequestMessage request)
+        private async Task UpdateIssueStateAsync(long issueId, string state)
+        {
+            var issueData = new { state_event = state };
+            var request = CreateRequest(HttpMethod.Put,
+                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues/{issueId}",
+                issueData);
+
+            await SendRequestAsync(request);
+        }
+
+        private async Task UpdateIssueAsync(long issueId, object issueData)
+        {
+            var request = CreateRequest(HttpMethod.Put,
+                $"https://gitlab.com/api/v4/projects/{_repositoryId}/issues/{issueId}",
+                issueData);
+
+            await SendRequestAsync(request);
+        }
+
+        protected override void ConfigureRequestHeaders(HttpRequestMessage request)
         {
             request.Headers.Add("PRIVATE-TOKEN", $"{_authToken}");
             request.Headers.Add("User-Agent", "HttpClient");
